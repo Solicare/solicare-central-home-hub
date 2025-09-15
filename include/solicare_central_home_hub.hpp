@@ -81,6 +81,17 @@ namespace ApiClient
 {
 inline constexpr std::string_view TAG = "SolicareApiClient";
 inline constexpr auto LOG_COLOR       = Logger::ConsoleColor::PINK;
+
+inline constexpr auto BASE_API_HOST       = "dev-api.solicare.kro.kr";
+inline constexpr auto BASE_API_PORT       = "443";
+inline constexpr auto BASE_API_LOGIN_PATH = "/api/senior/login";
+
+struct SeniorIdentity
+{
+	std::string name;
+	std::string uuid;
+	std::string token;
+};
 } // namespace ApiClient
 } // namespace SolicareHomeHub
 
@@ -100,15 +111,21 @@ class SolicareCentralHomeHub
 	static void process_image(const std::shared_ptr<WebSocketServerContext::SessionInfo>& session_info,
 	                          const std::shared_ptr<WebSocketServerContext::Buffer>& buffer);
 
+	void login();
 	void runtime();
 
   private:
 	boost::asio::io_context ioc_;
 	std::thread io_context_run_thread_;
 	std::optional<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>> ioc_work_guard_;
+
 	std::shared_ptr<AsyncWebSocketServer> websocket_server_;
 
+	SolicareHomeHub::ApiClient::SeniorIdentity identity_;
+
 	static int prompt_menu_selection();
+
+	bool process_senior_login(std::string_view user_id, std::string_view password);
 	void on_menu_server_start();
 	void on_menu_server_stop();
 };

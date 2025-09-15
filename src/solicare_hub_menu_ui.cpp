@@ -1,8 +1,47 @@
 #include "solicare_central_home_hub.hpp"
+#include <fmt/core.h>
 
 using namespace std;
 
 using namespace Logger;
+
+void SolicareCentralHomeHub::login()
+{
+	std::string id, pw;
+	bool logged_in = false;
+	while (!logged_in)
+	{
+		constexpr int width = 40;
+		std::cout << string(width, '=') << std::endl;
+		std::cout << "|" << std::setw(width - 2) << std::setfill(' ') << std::left << "      Solicare Central Home Hub"
+		          << "|" << std::endl;
+		std::cout << "|" << std::setw(width - 2) << std::setfill('-') << "" << "|" << std::endl;
+		std::cout << "|" << std::setw(width - 2) << std::setfill(' ') << "            Please Login" << "|" << std::endl;
+		std::cout << "|" << std::setw(width - 2) << std::setfill('-') << "" << "|" << std::endl;
+		std::cout << "| Username: 시니어 계정 사용자 ID" << std::setw(width - 31) << std::setfill(' ') << "" << "|"
+		          << std::endl;
+		std::cout << "| Password: 시니어 계정 사용자 PW" << std::setw(width - 31) << std::setfill(' ') << "" << "|"
+		          << std::endl;
+		std::cout << string(width, '=') << std::endl;
+
+		std::cout << "Username: ";
+		std::getline(std::cin, id);
+		std::cout << "Password: ";
+		std::getline(std::cin, pw);
+		std::cout << std::endl;
+
+		logged_in = process_senior_login(id, pw);
+		std::this_thread::sleep_for(std::chrono::milliseconds(500));
+		if (!logged_in)
+		{
+			std::cout << colored_text(ConsoleColor::YELLOW, "\nLogin failed. Please try again.") << std::endl;
+			std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+		}
+	}
+	std::cout << colored_text(ConsoleColor::GREEN, fmt::format("\nLogin successful! Welcome, {}!", identity_.name))
+	          << std::endl;
+	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+}
 
 int SolicareCentralHomeHub::prompt_menu_selection()
 {

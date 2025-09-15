@@ -197,6 +197,7 @@ void SolicareCentralHomeHub::on_menu_server_stop()
 int main()
 {
 	SolicareCentralHomeHub hub;
+	hub.login();
 	hub.runtime();
 	return 0;
 }

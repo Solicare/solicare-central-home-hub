@@ -30,8 +30,11 @@ message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}
 # 5. 라이브러리/패키지 찾기
 find_package(OpenCV REQUIRED)
 find_package(magic_enum CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
 find_package(TBB REQUIRED)
 find_package(fmt REQUIRED)
+find_package(OpenSSL REQUIRED)
+find_package(Threads REQUIRED)
 
 # 6. 소스/헤더 파일 수집
 file(GLOB_RECURSE SRC_FILES "src/*.cpp")
@@ -54,8 +57,11 @@ target_link_libraries(${PROJECT_NAME}
         PRIVATE
         ${OpenCV_LIBS}
         magic_enum::magic_enum
+        nlohmann_json::nlohmann_json
         TBB::tbb
         fmt::fmt
+        OpenSSL::SSL
+        OpenSSL::Crypto
 )
 
 # 10. 플랫폼별 추가 라이브러리 (Windows)
