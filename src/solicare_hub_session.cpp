@@ -45,6 +45,16 @@ void WebSocketServerContext::on_session_created(const shared_ptr<Session>& sessi
 		const auto camera_data  = get<shared_ptr<CameraProcessor::CameraSessionData>>(session->info->data);
 		camera_data->device_tag = fmt::format("{}({})", message, device_ip);
 	}
+	else if (message.find("WEARABLE") != string::npos)
+	{
+		session->info->type = SESSION_WEARABLE;
+		session->info->data = make_shared<WearableProcessor::WearableSessionData>();
+	}
+	else if (message.find("TEST") != string::npos)
+	{
+		session->info->type = SESSION_TEST;
+		session->info->data = message;
+	}
 	else
 	{
 		Logger::log_warn(TAG, fmt::format("Unknown device type received: '{}' from {}", message, device_ip));
@@ -58,6 +68,17 @@ void WebSocketServerContext::on_session_read(const shared_ptr<Session>& session,
 	    holds_alternative<shared_ptr<CameraProcessor::CameraSessionData>>(session->info->data))
 	{
 		SolicareCentralHomeHub::process_image(session->info, buffer);
+	}
+	else if (session->info->type == SESSION_WEARABLE &&
+	         holds_alternative<shared_ptr<WearableProcessor::WearableSessionData>>(session->info->data))
+	{
+		SolicareCentralHomeHub::process_wearable(session->info, buffer);
+	}
+	else if (session->info->type == SESSION_TEST && holds_alternative<std::string>(session->info->data))
+	{
+		const auto session_tag = get<string>(session->info->data);
+		Logger::log_info(TAG, fmt::format("[Receive] '{}' sent: {}", session_tag, buffers_to_string(buffer->data())),
+		                 LOG_COLOR);
 	}
 	else
 	{
@@ -124,7 +145,7 @@ void WebSocketServerContext::on_session_manage()
 
 		for (const auto& device_ip : sessions_to_remove)
 		{
-			Logger::log_info(TAG, fmt::format("[Removed] session '{}' had been removed.", device_ip), LOG_COLOR);
+			Logger::log_info(TAG, fmt::format("[Remove] session '{}' had been removed.", device_ip), LOG_COLOR);
 			ws_session_map.erase(device_ip);
 		}
 	}

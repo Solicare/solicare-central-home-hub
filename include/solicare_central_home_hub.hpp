@@ -42,6 +42,7 @@ inline constexpr auto LOG_COLOR       = Logger::ConsoleColor::VIOLET;
 enum SESSION_TYPE
 {
 	SESSION_NOT_IDENTIFIED,
+	SESSION_TEST,
 	SESSION_CAMERA,
 	SESSION_WEARABLE
 };
@@ -74,7 +75,17 @@ struct CameraSessionData
 namespace WearableProcessor
 {
 inline constexpr std::string_view TAG = "WearableProcessor";
-inline constexpr auto LOG_COLOR       = Logger::ConsoleColor::MAGENTA;
+inline constexpr auto LOG_COLOR       = Logger::ConsoleColor::BROWN;
+
+struct WearableSessionData
+{
+	bool is_wearing;
+	bool is_fall_detected;
+	double heart_rate_bpm;
+	double body_temperature;
+	double air_humidity;
+	double battery_percentage;
+};
 } // namespace WearableProcessor
 
 namespace ApiClient
@@ -97,8 +108,12 @@ struct SeniorIdentity
 
 struct WebSocketServerContext::SessionInfo
 {
-	SolicareHomeHub::SessionManager::SESSION_TYPE type = SolicareHomeHub::SessionManager::SESSION_NOT_IDENTIFIED;
-	std::variant<std::monostate, std::shared_ptr<SolicareHomeHub::CameraProcessor::CameraSessionData>> data{};
+	using SessionType  = SolicareHomeHub::SessionManager::SESSION_TYPE;
+	using CameraData   = SolicareHomeHub::CameraProcessor::CameraSessionData;
+	using WearableData = SolicareHomeHub::WearableProcessor::WearableSessionData;
+
+	SessionType type = SolicareHomeHub::SessionManager::SESSION_TYPE::SESSION_NOT_IDENTIFIED;
+	std::variant<std::monostate, std::string, std::shared_ptr<CameraData>, std::shared_ptr<WearableData>> data{};
 	TimePoint timepoint_connected, timepoint_last_received, timepoint_last_processed, timepoint_disconnected;
 };
 
@@ -110,6 +125,8 @@ class SolicareCentralHomeHub
 
 	static void process_image(const std::shared_ptr<WebSocketServerContext::SessionInfo>& session_info,
 	                          const std::shared_ptr<WebSocketServerContext::Buffer>& buffer);
+	static void process_wearable(const std::shared_ptr<WebSocketServerContext::SessionInfo>& session_info,
+	                             const std::shared_ptr<WebSocketServerContext::Buffer>& buffer);
 
 	void login();
 	void runtime();
