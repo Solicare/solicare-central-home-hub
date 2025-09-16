@@ -14,13 +14,12 @@ void WebSocketServerContext::on_session_created(const shared_ptr<Session>& sessi
 	if (!session->ws->got_text())
 	{
 		Logger::log_warn(
-		    TAG,
-		    fmt::format("[Session] Expected text message to identify device type, but received other {}", device_ip));
+		    TAG, fmt::format("Expected text message to identify device type, but received other {}", device_ip));
 		return;
 	}
 
 	const auto message = buffers_to_string(buffer->data());
-	Logger::log_info(TAG, fmt::format("[Session][Created] New session: device_ip={} | message={}", device_ip, message),
+	Logger::log_info(TAG, fmt::format("[Created] New session: device_ip={} | message={}", device_ip, message),
 	                 LOG_COLOR);
 
 	// TODO: send same message back to the device to confirm connection established
@@ -118,8 +117,7 @@ void WebSocketServerContext::on_session_manage()
 			    }
 			    else
 			    {
-				    log_info(TAG, fmt::format("[Disconnected] session '{}' had been disconnect.", device_ip),
-				             LOG_COLOR);
+				    log_info(TAG, fmt::format("[Disconnect] session '{}' had been disconnect.", device_ip), LOG_COLOR);
 				    sessions_to_remove.push_back(device_ip);
 			    }
 		    });
