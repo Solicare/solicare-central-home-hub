@@ -41,20 +41,25 @@ bool SolicareCentralHomeHub::process_senior_login(std::string_view user_id, std:
 		}
 		if (res.status == 200)
 		{
-			auto name_opt  = JsonUtils::get_nested_string(res_json, "body", "name");
-			auto token_opt = JsonUtils::get_nested_string(res_json, "body", "token");
-			if (name_opt && token_opt)
+			auto profile_opt = JsonUtils::get_nested_json(res_json, vector<string>{"body", "profile"});
+			if (auto token_opt = JsonUtils::get_nested_string(res_json, "body", "token"); profile_opt && token_opt)
 			{
-				auto subject_opt = JwtUtils::extractSubjectFromJwt(*token_opt);
+				const auto subject_opt = JwtUtils::extractSubjectFromJwt(*token_opt);
 				if (!subject_opt)
 				{
 					Logger::log_error(TAG, "JWT subject extraction failed.");
 					return false;
 				}
-				identity_ = SeniorIdentity(*name_opt, *subject_opt, *token_opt);
+				const auto name = JsonUtils::get_string(*profile_opt, "name");
+				if (!name)
+				{
+					Logger::log_error(TAG, "Profile name extraction failed.");
+					return false;
+				}
+				identity_ = SeniorIdentity(*name, *subject_opt, *token_opt);
 				return true;
 			}
-			Logger::log_error(TAG, "Login response missing body/name/token.");
+			Logger::log_error(TAG, "Login response missing body/token or body/profile.");
 		}
 		// else if (res.status == 401)
 		// {

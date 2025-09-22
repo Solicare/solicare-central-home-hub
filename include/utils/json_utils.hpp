@@ -55,6 +55,19 @@ inline std::optional<std::string> get_string(const json& j, const std::string& f
 	return std::nullopt;
 }
 
+// Safely extract a nested JSON object by following a sequence of keys.
+inline std::optional<json> get_nested_json(const json& j, const std::vector<std::string>& keys)
+{
+	const json* current = &j;
+	for (const auto& key : keys)
+	{
+		if (!current->contains(key) || !(*current)[key].is_object())
+			return std::nullopt;
+		current = &(*current)[key];
+	}
+	return *current;
+}
+
 // Safely extract a string field from a nested JSON object.
 inline std::optional<std::string> get_nested_string(const json& j, const std::string& obj, const std::string& field)
 {
