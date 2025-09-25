@@ -11,6 +11,8 @@
 
 namespace SolicareHomeHub
 {
+inline constexpr auto DEFAULT_WS_SERVER_PORT = 3000;
+
 enum MONITOR_MODE
 {
 	MODE_NORMAL,
@@ -33,6 +35,12 @@ namespace Launcher
 inline constexpr std::string_view TAG = "SolicareHomeHub";
 inline constexpr auto LOG_COLOR       = Logger::ConsoleColor::YELLOW;
 } // namespace Launcher
+
+namespace Monitor
+{
+inline constexpr std::string_view TAG = "MonitorProcess";
+inline constexpr auto LOG_COLOR       = Logger::ConsoleColor::CYAN;
+} // namespace Monitor
 
 namespace SessionManager
 {
@@ -143,6 +151,8 @@ class SolicareCentralHomeHub
 	static int prompt_menu_selection();
 
 	bool process_senior_login(std::string_view user_id, std::string_view password);
+	bool fetch_monitoring_status();
+	void on_menu_monitor_mode();
 	void on_menu_server_start();
 	void on_menu_server_stop();
 };

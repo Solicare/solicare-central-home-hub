@@ -5,7 +5,9 @@
 #include "utils/logging_utils.hpp"
 
 using namespace std;
+
 using namespace SolicareHomeHub::ApiClient;
+
 using json = nlohmann::json;
 
 bool SolicareCentralHomeHub::process_senior_login(std::string_view user_id, std::string_view password)
@@ -76,4 +78,59 @@ bool SolicareCentralHomeHub::process_senior_login(std::string_view user_id, std:
 		Logger::log_error(TAG, fmt::format("Login exception: {}", ex.what()));
 	}
 	return false;
+}
+
+bool SolicareCentralHomeHub::fetch_monitoring_status()
+{
+	try
+	{
+		const std::string api_path = "/api/care/senior/" + identity_.uuid + "/monitoring";
+		auto [status, body, error] = HttpClient::requestHttpsWithAuth(ioc_, identity_.token, BASE_API_HOST,
+		                                                              HttpClient::Method::GET, api_path, "", 3000);
+		if (error)
+		{
+			Logger::log_error(TAG, fmt::format("Monitoring API error: {}", *error));
+			return false;
+		}
+		if (!body)
+		{
+			Logger::log_error(TAG, "Monitoring API response body is empty.");
+			return false;
+		}
+		const auto res_json_opt = JsonUtils::parse_json(*body);
+		if (!res_json_opt)
+		{
+			Logger::log_error(TAG, "JSON parse error.");
+			return false;
+		}
+		if (status == 200)
+		{
+			const auto& res_json = *res_json_opt;
+			if (!res_json.contains("body"))
+			{
+				Logger::log_error(TAG, "Monitoring API: 'body' field not found.");
+				return false;
+			}
+			if (res_json["body"].is_boolean())
+			{
+				return res_json["body"].get<bool>();
+			}
+			Logger::log_error(TAG, fmt::format("Monitoring API: unexpected body type: {}", res_json["body"].dump()));
+		}
+		else if (res_json_opt->contains("message"))
+		{
+			Logger::log_error(TAG,
+			                  fmt::format("Monitoring API: message: {}", res_json_opt->at("message").get<string>()));
+		}
+		else
+		{
+			Logger::log_error(TAG, fmt::format("Monitoring API: HTTP status {}", status));
+		}
+		return false;
+	}
+	catch (const std::exception& ex)
+	{
+		Logger::log_error(TAG, fmt::format("Monitoring API exception: {}", ex.what()));
+		return false;
+	}
 }

@@ -13,6 +13,7 @@ SolicareCentralHomeHub::SolicareCentralHomeHub()
 	io_context_run_thread_ = std::thread(
 	    [this]()
 	    {
+		    ioc_.run();
 		    try
 		    {
 			    ioc_.run();
@@ -28,10 +29,12 @@ SolicareCentralHomeHub::SolicareCentralHomeHub()
 		    catch (const std::exception& e)
 		    {
 			    log_error(TAG, fmt::format("io_context.run() exception: {}", e.what()));
+			    ioc_.stop();
 		    }
 		    catch (...)
 		    {
 			    log_error(TAG, "io_context.run() unknown exception occurred");
+			    ioc_.stop();
 		    }
 	    });
 }
@@ -94,16 +97,26 @@ void SolicareCentralHomeHub::runtime()
 		{
 		case 1:
 		{
+			if (log_tag_filter == TAG)
+			{
+				log_info(TAG, "로그 출력 제한이 해제되었습니다.", ConsoleColor::GREEN);
+				remove_tag_filter();
+			}
+			on_menu_monitor_mode();
+			break;
+		}
+		case 2:
+		{
 			if (!websocket_server_)
 			{
 				on_menu_server_start();
 			}
 			break;
 		}
-		case 2:
+		case 3:
 			on_menu_server_stop();
 			break;
-		case 3:
+		case 4:
 			running = false;
 			on_menu_server_stop();
 			break;
