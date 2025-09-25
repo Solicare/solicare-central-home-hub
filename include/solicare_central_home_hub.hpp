@@ -61,7 +61,10 @@ namespace CameraProcessor
 inline constexpr std::string_view TAG = "CameraProcessor";
 inline constexpr auto LOG_COLOR       = Logger::ConsoleColor::TEAL;
 
-inline constexpr int MAX_BODY_POINT = 30;
+inline constexpr int MAX_BODY_POINT          = 30;
+inline constexpr auto YOLOV8_POSE_MODEL_PATH = "../models/yolov8n-pose.onnx";
+
+extern std::optional<cv::dnn::Net> pose_net;
 
 enum PersonPosture
 {
@@ -76,7 +79,7 @@ struct CameraSessionData
 {
 	std::string device_tag;
 	PersonPosture pose = UNKNOWN;
-	boost::lockfree::queue<cv::Point2f> body_points{MAX_BODY_POINT};
+	std::deque<std::vector<cv::Point2f>> body_points;
 };
 } // namespace CameraProcessor
 

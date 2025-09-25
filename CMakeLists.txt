@@ -29,6 +29,15 @@ message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}
 
 # 5. 라이브러리/패키지 찾기
 find_package(OpenCV REQUIRED)
+# OpenCV CUDA 지원 여부 확인
+if (DEFINED OpenCV_WITH_CUDA)
+    set(OPENCV_CUDA_STATUS ${OpenCV_WITH_CUDA})
+elseif (DEFINED OpenCV_CUDA_VERSION)
+    set(OPENCV_CUDA_STATUS "YES (version: ${OpenCV_CUDA_VERSION})")
+else ()
+    set(OPENCV_CUDA_STATUS "UNKNOWN (OpenCVConfig에서 CUDA 변수 미제공)")
+endif ()
+
 find_package(magic_enum CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(TBB REQUIRED)
@@ -93,4 +102,5 @@ message(STATUS "Project: ${PROJECT_NAME} v${PROJECT_VERSION}")
 message(STATUS "C++ Standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "OpenCV Version: ${OpenCV_VERSION}")
+message(STATUS "OpenCV CUDA Support: ${OPENCV_CUDA_STATUS}")
 message(STATUS "=============================")

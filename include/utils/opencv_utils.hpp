@@ -117,4 +117,28 @@ inline void draw_colored_line(cv::Mat& image, const cv::Point& pt1, const cv::Po
 {
 	cv::line(image, pt1, pt2, colorToScalar(color), thickness);
 }
+
+inline int enable_cuda_devices()
+{
+	std::cout << "[OpenCV] OpenCV Build Information: " << cv::getBuildInformation();
+	try
+	{
+		const int device_count = cv::cuda::getCudaEnabledDeviceCount();
+		std::cout << "[CUDA] enabled device count: " << device_count << std::endl;
+		if (device_count > 0)
+		{
+			cv::cuda::setDevice(0);
+			std::cout << "[CUDA] ";
+			cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
+			cv::cuda::GpuMat dummy(1, 1, CV_8U); // Force context creation
+			std::cout << "[OpenCV] CUDA device successfully initialized via OpenCV." << std::endl;
+		}
+		return device_count;
+	}
+	catch (const cv::Exception& e)
+	{
+		std::cerr << "[CUDA] CUDA/cuDNN initialization failed: " << e.what() << std::endl;
+		return 0;
+	}
+}
 } // namespace OpenCVUtils

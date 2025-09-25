@@ -1,4 +1,5 @@
 #include "solicare_central_home_hub.hpp"
+#include "utils/opencv_utils.hpp"
 #include "utils/system_utils.hpp"
 
 using namespace std;
@@ -9,6 +10,30 @@ using namespace SolicareHomeHub::Launcher;
 
 SolicareCentralHomeHub::SolicareCentralHomeHub()
 {
+	using SolicareHomeHub::CameraProcessor::pose_net;
+	const int cuda_devices_count = OpenCVUtils::enable_cuda_devices();
+	pose_net.emplace(cv::dnn::readNetFromONNX(SolicareHomeHub::CameraProcessor::YOLOV8_POSE_MODEL_PATH));
+	if (cuda_devices_count > 0)
+	{
+		try
+		{
+			pose_net->setPreferableBackend(cv::dnn::DNN_BACKEND_CUDA);
+			pose_net->setPreferableTarget(cv::dnn::DNN_TARGET_CUDA);
+			log_info(TAG, "Sucessfully set CUDA backend and target to DNN model.", ConsoleColor::GREEN);
+		}
+		catch (const std::exception& e)
+		{
+			log_warn(TAG, fmt::format("Failed to set CUDA backend and target to DNN model: {}", e.what()));
+			pose_net->setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
+			pose_net->setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
+		}
+	}
+	else
+	{
+		log_warn(TAG, "No CUDA device found. Using CPU backend for DNN model.");
+		pose_net->setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
+		pose_net->setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
+	}
 	ioc_work_guard_.emplace(ioc_.get_executor());
 	io_context_run_thread_ = std::thread(
 	    [this]()
@@ -37,6 +62,7 @@ SolicareCentralHomeHub::SolicareCentralHomeHub()
 			    ioc_.stop();
 		    }
 	    });
+	log_info(TAG, "Sucessfully initialized Solicare Central Home Hub.", LOG_COLOR);
 }
 
 SolicareCentralHomeHub::~SolicareCentralHomeHub()
@@ -210,7 +236,7 @@ void SolicareCentralHomeHub::on_menu_server_stop()
 int main()
 {
 	SolicareCentralHomeHub hub;
-	hub.login();
+	// hub.login();
 	hub.runtime();
 	return 0;
 }

@@ -1,4 +1,7 @@
+#include <iostream>
 #include <magic_enum.hpp>
+#include <opencv2/core/cuda.hpp>
+#include <opencv2/dnn.hpp>
 
 #include "solicare_central_home_hub.hpp"
 #include "utils/opencv_utils.hpp"
@@ -9,6 +12,8 @@ using namespace boost::beast;
 using namespace magic_enum;
 
 using namespace SolicareHomeHub::CameraProcessor;
+
+std::optional<cv::dnn::Net> SolicareHomeHub::CameraProcessor::pose_net;
 
 void SolicareCentralHomeHub::process_image(const shared_ptr<WebSocketServerContext::SessionInfo>& session_info,
                                            const shared_ptr<WebSocketServerContext::Buffer>& buffer)
@@ -24,8 +29,56 @@ void SolicareCentralHomeHub::process_image(const shared_ptr<WebSocketServerConte
 		                              data->device_tag));
 		return;
 	}
-
-	// TODO: implement pose detection and drawing process here
+	// std::vector<cv::Point2f> keypoints;
+	// cv::Mat blob = cv::dnn::blobFromImage(decoded_image, 1.0 / 255.0, cv::Size(640, 640), cv::Scalar(), true,
+	// false); pose_net->setInput(blob); cv::Mat output; try
+	// {
+	// 	output = pose_net->forward();
+	// }
+	// catch (const cv::Exception& e)
+	// {
+	// 	std::cerr << "[OpenCV DNN] forward() error: " << e.what() << std::endl;
+	// 	Logger::log_error(TAG, fmt::format("[OpenCV DNN] forward() error: {}", e.what()));
+	// 	return;
+	// }
+	// // output: [1, N, 56] (N: 감지된 사람 수, 56: bbox+keypoints)
+	// // keypoints: 17개 (x, y, conf)씩
+	// if (output.dims == 3)
+	// {
+	// 	int num = output.size[1];
+	// 	for (int i = 0; i < num; ++i)
+	// 	{
+	// 		const float* row = output.ptr<float>(0, i);
+	// 		for (int k = 0; k < 17; ++k)
+	// 		{
+	// 			float x    = row[6 + k * 3];
+	// 			float y    = row[6 + k * 3 + 1];
+	// 			float conf = row[6 + k * 3 + 2];
+	// 			if (conf > 0.3)
+	// 				keypoints.emplace_back(x, y);
+	// 		}
+	// 		break; // 첫 번째 사람만
+	// 	}
+	// }
+	//
+	// // COCO keypoint 연결 순서
+	// static const std::vector<std::pair<int, int>> skeleton = {
+	//     {0, 1},  {1, 2},   {2, 3},   {3, 4},   // 오른팔
+	//     {0, 5},  {5, 6},   {6, 7},   {7, 8},   // 왼팔
+	//     {0, 9},  {9, 10},  {10, 11}, {11, 12}, // 오른다리
+	//     {0, 13}, {13, 14}, {14, 15}, {15, 16}  // 왼다리
+	// };
+	// for (const auto& [i, j] : skeleton)
+	// {
+	// 	if (i < keypoints.size() && j < keypoints.size())
+	// 	{
+	// 		cv::line(decoded_image, keypoints[i], keypoints[j], cv::Scalar(0, 255, 0), 2);
+	// 	}
+	// }
+	// for (const auto& pt : keypoints)
+	// {
+	// 	cv::circle(decoded_image, pt, 3, cv::Scalar(0, 0, 255), -1);
+	// }
 
 	const double fps = 1.0 / duration<double>(steady_clock::now() - session_info->timepoint_last_processed).count();
 	OpenCVUtils::put_text_overlay(decoded_image, cv::String(enum_name<PersonPosture>(data->pose)),
