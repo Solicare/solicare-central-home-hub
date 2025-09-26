@@ -62,7 +62,7 @@ SolicareCentralHomeHub::SolicareCentralHomeHub()
 			    ioc_.stop();
 		    }
 	    });
-	log_info(TAG, "Sucessfully initialized Solicare Central Home Hub.", LOG_COLOR);
+	log_info(TAG, "Successfully initialized Solicare Central Home Hub.", LOG_COLOR);
 }
 
 SolicareCentralHomeHub::~SolicareCentralHomeHub()
@@ -128,7 +128,7 @@ void SolicareCentralHomeHub::runtime()
 				log_info(TAG, "로그 출력 제한이 해제되었습니다.", ConsoleColor::GREEN);
 				remove_tag_filter();
 			}
-			on_menu_monitor_mode();
+			on_menu_guardian_mode();
 			break;
 		}
 		case 2:
@@ -186,6 +186,8 @@ void SolicareCentralHomeHub::on_menu_server_start()
 			WebSocketServerContext::ws_session_map.clear();
 			websocket_server_ = make_shared<AsyncWebSocketServer>(ioc_);
 			websocket_server_->start();
+			// TODO: 사용자에게 실제로 알림을 전송할 것 인지 물어보기
+			start_monitoring();
 		}
 		catch (const boost::system::system_error& e)
 		{
@@ -220,6 +222,7 @@ void SolicareCentralHomeHub::on_menu_server_stop()
 	cv::destroyAllWindows();
 	if (websocket_server_)
 	{
+		stop_monitoring();
 		log_info(TAG, "서버 종료를 대기하는 중 입니다.", LOG_COLOR);
 		websocket_server_->stop();
 		this_thread::sleep_for(milliseconds(1000));
@@ -236,7 +239,7 @@ void SolicareCentralHomeHub::on_menu_server_stop()
 int main()
 {
 	SolicareCentralHomeHub hub;
-	// hub.login();
+	hub.login();
 	hub.runtime();
 	return 0;
 }

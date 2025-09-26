@@ -3,6 +3,7 @@
 #include "utils/json_utils.hpp"
 #include "utils/jwt_utils.hpp"
 #include "utils/logging_utils.hpp"
+#include <cmath>
 
 using namespace std;
 
@@ -131,6 +132,123 @@ bool SolicareCentralHomeHub::fetch_monitoring_status()
 	catch (const std::exception& ex)
 	{
 		Logger::log_error(TAG, fmt::format("Monitoring API exception: {}", ex.what()));
+		return false;
+	}
+}
+
+bool SolicareCentralHomeHub::postSeniorAlertEvent(const std::string& eventType, const std::string& monitorMode,
+                                                  const std::string& base64Image)
+{
+	try
+	{
+		const std::string api_path = "/api/care/senior/" + identity_.uuid + "/alerts";
+		// Format timestamp manually
+		const auto now          = std::chrono::system_clock::now();
+		const std::time_t now_c = std::chrono::system_clock::to_time_t(now);
+		char buf[20];
+		std::strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%S", std::localtime(&now_c));
+		const nlohmann::json body_json = {
+		    {"timestamp", std::string(buf)}, {"eventType", eventType}, {"monitorMode", monitorMode},
+		    {"base64Image", base64Image},    {"isRead", false},        {"isDismissed", false}};
+		const std::string body         = body_json.dump();
+		auto [status, res_body, error] = HttpClient::requestHttpsWithAuth(
+		    ioc_, identity_.token, BASE_API_HOST, HttpClient::Method::POST, api_path, body, 5000);
+		if (error)
+		{
+			Logger::log_error(TAG, fmt::format("Alert API error: {}", *error));
+			return false;
+		}
+		if (!res_body)
+		{
+			Logger::log_error(TAG, "Alert API response body is empty.");
+			return false;
+		}
+		auto res_json_opt = JsonUtils::parse_json(*res_body);
+		if (!res_json_opt)
+		{
+			Logger::log_error(TAG, "Alert API JSON parse error.");
+			return false;
+		}
+		if (status == 200 || status == 201)
+		{
+			Logger::log_info(TAG, "Alert event posted successfully.", LOG_COLOR);
+			return true;
+		}
+		if (res_json_opt->contains("message"))
+		{
+			Logger::log_error(TAG,
+			                  fmt::format("Alert API: message: {}", res_json_opt->at("message").get<std::string>()));
+		}
+		else
+		{
+			Logger::log_error(TAG, fmt::format("Alert API: HTTP status {}", status));
+		}
+		return false;
+	}
+	catch (const std::exception& ex)
+	{
+		Logger::log_error(TAG, fmt::format("Alert API exception: {}", ex.what()));
+		return false;
+	}
+}
+
+bool SolicareCentralHomeHub::postSeniorStats(bool cameraFallDetected, bool wearableFallDetected, double temperature,
+                                             double humidity, int heartRate, double wearableBattery)
+{
+	try
+	{
+		const std::string api_path = "/api/care/senior/" + identity_.uuid + "/stats";
+		// Format timestamp manually
+		const auto now          = std::chrono::system_clock::now();
+		const std::time_t now_c = std::chrono::system_clock::to_time_t(now);
+		char buf[20];
+		std::strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%S", std::localtime(&now_c));
+		const nlohmann::json body_json = {{"timestamp", std::string(buf)},
+		                                  {"cameraFallDetected", cameraFallDetected},
+		                                  {"wearableFallDetected", wearableFallDetected},
+		                                  {"temperature", std::isnan(temperature) ? 0.0 : temperature},
+		                                  {"humidity", std::isnan(humidity) ? 0.0 : humidity},
+		                                  {"heartRate", heartRate},
+		                                  {"wearableBattery", std::isnan(wearableBattery) ? 0.0 : wearableBattery}};
+		const std::string body         = body_json.dump();
+		auto [status, res_body, error] = HttpClient::requestHttpsWithAuth(
+		    ioc_, identity_.token, BASE_API_HOST, HttpClient::Method::POST, api_path, body, 5000);
+		if (error)
+		{
+			Logger::log_error(TAG, fmt::format("Stats API error: {}", *error));
+			return false;
+		}
+		if (!res_body)
+		{
+			Logger::log_error(TAG, "Stats API response body is empty.");
+			return false;
+		}
+		auto res_json_opt = JsonUtils::parse_json(*res_body);
+		if (!res_json_opt)
+		{
+			Logger::log_error(TAG, "Stats API JSON parse error.");
+			return false;
+		}
+		Logger::log_info(TAG, res_json_opt.value().dump());
+		if (status == 200 || status == 201)
+		{
+			Logger::log_info(TAG, "Stats event posted successfully.", LOG_COLOR);
+			return true;
+		}
+		if (res_json_opt->contains("message"))
+		{
+			Logger::log_error(TAG,
+			                  fmt::format("Stats API: message: {}", res_json_opt->at("message").get<std::string>()));
+		}
+		else
+		{
+			Logger::log_error(TAG, fmt::format("Stats API: HTTP status {}", status));
+		}
+		return false;
+	}
+	catch (const std::exception& ex)
+	{
+		Logger::log_error(TAG, fmt::format("Stats API exception: {}", ex.what()));
 		return false;
 	}
 }

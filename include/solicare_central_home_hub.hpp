@@ -1,10 +1,11 @@
 #pragma once
 #include <boost/asio/io_context.hpp>
-#include <boost/lockfree/queue.hpp>
 #include <fmt/core.h>
 #include <memory>
 #include <opencv2/opencv.hpp>
 #include <optional>
+#include <tbb/concurrent_queue.h>
+#include <thread>
 
 #include "server/async_websocket_server.hpp"
 #include "utils/logging_utils.hpp"
@@ -13,34 +14,46 @@ namespace SolicareHomeHub
 {
 inline constexpr auto DEFAULT_WS_SERVER_PORT = 3000;
 
-enum MONITOR_MODE
-{
-	MODE_NORMAL,
-	MODE_CAMERA_ONLY,
-	MODE_DEVICE_ONLY,
-	MODE_OFF
-};
-
-enum MONITOR_STATUS
-{
-	STANDBY,
-	STATUS_GOOD,
-	STATUS_FALLEN,
-	STATUS_NO_HEARTBEAT,
-	STATUS_INACTIVITY
-};
-
 namespace Launcher
 {
 inline constexpr std::string_view TAG = "SolicareHomeHub";
 inline constexpr auto LOG_COLOR       = Logger::ConsoleColor::YELLOW;
 } // namespace Launcher
 
-namespace Monitor
+namespace ApiClient
 {
-inline constexpr std::string_view TAG = "MonitorProcess";
-inline constexpr auto LOG_COLOR       = Logger::ConsoleColor::CYAN;
-} // namespace Monitor
+inline constexpr std::string_view TAG = "SolicareApiClient";
+inline constexpr auto LOG_COLOR       = Logger::ConsoleColor::PINK;
+
+inline constexpr auto BASE_API_HOST       = "dev-api.solicare.kro.kr";
+inline constexpr auto BASE_API_PORT       = "443";
+inline constexpr auto BASE_API_LOGIN_PATH = "/api/senior/login";
+
+enum API_MONITOR_MODE
+{
+	FULL_MONITORING,
+	CAMERA_ONLY,
+	WEARABLE_ONLY,
+	NO_MONITORING
+};
+
+enum API_MONITOR_EVENT
+{
+	FALL_DETECTED,
+	CAMERA_BATTERY_LOW,
+	CAMERA_DISCONNECTED,
+	WEARABLE_BATTERY_LOW,
+	WEARABLE_DISCONNECTED,
+	INACTIVITY_ALERT
+};
+
+struct SeniorIdentity
+{
+	std::string name;
+	std::string uuid;
+	std::string token;
+};
+} // namespace ApiClient
 
 namespace SessionManager
 {
@@ -99,22 +112,26 @@ struct WearableSessionData
 };
 } // namespace WearableProcessor
 
-namespace ApiClient
+namespace Monitor
 {
-inline constexpr std::string_view TAG = "SolicareApiClient";
-inline constexpr auto LOG_COLOR       = Logger::ConsoleColor::PINK;
+inline constexpr std::string_view TAG = "MonitorProcess";
+inline constexpr auto LOG_COLOR       = Logger::ConsoleColor::CYAN;
 
-inline constexpr auto BASE_API_HOST       = "dev-api.solicare.kro.kr";
-inline constexpr auto BASE_API_PORT       = "443";
-inline constexpr auto BASE_API_LOGIN_PATH = "/api/senior/login";
+inline constexpr auto DATA_QUEUE_SIZE = 100;
 
-struct SeniorIdentity
-{
-	std::string name;
-	std::string uuid;
-	std::string token;
-};
-} // namespace ApiClient
+extern ApiClient::API_MONITOR_MODE mode;
+
+extern std::atomic<std::chrono::steady_clock::time_point> monitor_last_event_time;
+extern std::atomic<std::chrono::steady_clock::time_point> monitor_last_processed_time;
+
+extern tbb::concurrent_queue<CameraProcessor::CameraSessionData> camera_data_queue;
+extern std::atomic<std::chrono::steady_clock::time_point> camera_last_data_pushed_time;
+
+extern tbb::concurrent_queue<WearableProcessor::WearableSessionData> wearable_data_queue;
+extern std::atomic<std::chrono::steady_clock::time_point> wearable_last_worn_time;
+extern std::atomic<std::chrono::steady_clock::time_point> wearable_last_data_pushed_time;
+} // namespace Monitor
+
 } // namespace SolicareHomeHub
 
 struct WebSocketServerContext::SessionInfo
@@ -133,19 +150,22 @@ class SolicareCentralHomeHub
   public:
 	SolicareCentralHomeHub();
 	~SolicareCentralHomeHub();
-
 	static void process_image(const std::shared_ptr<WebSocketServerContext::SessionInfo>& session_info,
 	                          const std::shared_ptr<WebSocketServerContext::Buffer>& buffer);
 	static void process_wearable(const std::shared_ptr<WebSocketServerContext::SessionInfo>& session_info,
 	                             const std::shared_ptr<WebSocketServerContext::Buffer>& buffer);
-
 	void login();
 	void runtime();
+	void start_monitoring();
+	void stop_monitoring();
 
   private:
 	boost::asio::io_context ioc_;
 	std::thread io_context_run_thread_;
 	std::optional<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>> ioc_work_guard_;
+
+	std::thread monitoring_thread_;
+	std::atomic_bool monitoring_active_;
 
 	std::shared_ptr<AsyncWebSocketServer> websocket_server_;
 
@@ -155,7 +175,11 @@ class SolicareCentralHomeHub
 
 	bool process_senior_login(std::string_view user_id, std::string_view password);
 	bool fetch_monitoring_status();
-	void on_menu_monitor_mode();
+	bool postSeniorAlertEvent(const std::string& eventType, const std::string& monitorMode,
+	                          const std::string& base64Image);
+	bool postSeniorStats(bool cameraFallDetected, bool wearableFallDetected, double temperature, double humidity,
+	                     int heartRate, double wearableBattery);
+	void on_menu_guardian_mode();
 	void on_menu_server_start();
 	void on_menu_server_stop();
 };

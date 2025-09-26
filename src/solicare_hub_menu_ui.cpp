@@ -55,7 +55,7 @@ int SolicareCentralHomeHub::prompt_menu_selection()
 	std::cout << string(width, '=') << std::endl;
 	std::cout << "      Solicare Central Home Hub" << std::endl;
 	std::cout << string(width, '-') << std::endl;
-	std::cout << "  1. 보호자 모니터링 서비스 시작  | Start Monitoring Service" << std::endl;
+	std::cout << "  1. 보호자 제어 모니터링 시작  | Start Monitoring Service" << std::endl;
 	std::cout << "     - 보호자에 의해 제어되는 모니터링 서비스를 시작합니다." << std::endl;
 	std::cout << "  2. 웹소켓 서버 실행  | Start WebSocket Server" << std::endl;
 	std::cout << "     - 수동으로 비동기 웹소켓 서버를 실행합니다." << std::endl;

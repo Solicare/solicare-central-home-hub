@@ -27,7 +27,7 @@ struct ServerConfig
 {
 	int server_port              = 3000;
 	int max_session              = 5;
-	int session_timeout          = 5;
+	int session_timeout          = 10;
 	int session_manage_period_ms = 50;
 };
 

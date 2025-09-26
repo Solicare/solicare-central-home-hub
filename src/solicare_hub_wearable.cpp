@@ -3,7 +3,6 @@
 
 using namespace std;
 using namespace chrono;
-
 using namespace SolicareHomeHub::WearableProcessor;
 
 void SolicareCentralHomeHub::process_wearable(const std::shared_ptr<WebSocketServerContext::SessionInfo>& session_info,
@@ -39,6 +38,10 @@ void SolicareCentralHomeHub::process_wearable(const std::shared_ptr<WebSocketSer
 		                             data->is_wearing, data->is_fall_detected, data->heart_rate_bpm,
 		                             data->body_temperature, data->air_humidity, data->battery_percentage),
 		                 LOG_COLOR);
+
+		// push SessionData to wearable_data_queue for monitoring (Copy)
+		SolicareHomeHub::Monitor::wearable_data_queue.push(*data);
+		SolicareHomeHub::Monitor::wearable_last_data_pushed_time = steady_clock::now();
 	}
 	catch (const std::exception& e)
 	{

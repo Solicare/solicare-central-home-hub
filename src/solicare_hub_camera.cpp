@@ -2,6 +2,7 @@
 #include <magic_enum.hpp>
 #include <opencv2/core/cuda.hpp>
 #include <opencv2/dnn.hpp>
+#include <tbb/concurrent_queue.h>
 
 #include "solicare_central_home_hub.hpp"
 #include "utils/opencv_utils.hpp"
@@ -29,6 +30,9 @@ void SolicareCentralHomeHub::process_image(const shared_ptr<WebSocketServerConte
 		                              data->device_tag));
 		return;
 	}
+	cv::cuda::GpuMat gpu_decoded_image;
+	gpu_decoded_image.upload(decoded_image);
+
 	// std::vector<cv::Point2f> keypoints;
 	// cv::Mat blob = cv::dnn::blobFromImage(decoded_image, 1.0 / 255.0, cv::Size(640, 640), cv::Scalar(), true,
 	// false); pose_net->setInput(blob); cv::Mat output; try
@@ -81,11 +85,16 @@ void SolicareCentralHomeHub::process_image(const shared_ptr<WebSocketServerConte
 	// }
 
 	const double fps = 1.0 / duration<double>(steady_clock::now() - session_info->timepoint_last_processed).count();
-	OpenCVUtils::put_text_overlay(decoded_image, cv::String(enum_name<PersonPosture>(data->pose)),
+	cv::Mat cpu_decoded_image;
+	gpu_decoded_image.download(cpu_decoded_image);
+	OpenCVUtils::put_text_overlay(cpu_decoded_image, cv::String(enum_name<PersonPosture>(data->pose)),
 	                              OpenCVUtils::TEXT_TOP_RIGHT, OpenCVUtils::COLOR_RED);
-	OpenCVUtils::put_text_overlay(decoded_image, fmt::format("FPS(Process): {}", static_cast<int>(fps)),
+	OpenCVUtils::put_text_overlay(cpu_decoded_image, fmt::format("FPS(Process): {}", static_cast<int>(fps)),
 	                              OpenCVUtils::TEXT_TOP_LEFT, OpenCVUtils::COLOR_GREEN);
-
-	cv::imshow(data->device_tag, decoded_image);
+	cv::imshow(data->device_tag, cpu_decoded_image);
 	cv::waitKey(1);
+
+	// push SessionData to camera_data_queue for monitoring (Copy)
+	SolicareHomeHub::Monitor::camera_data_queue.push(*data);
+	SolicareHomeHub::Monitor::camera_last_data_pushed_time = steady_clock::now();
 }
