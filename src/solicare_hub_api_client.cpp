@@ -174,10 +174,12 @@ bool SolicareCentralHomeHub::postSeniorAlertEvent(const std::string& eventType, 
 			Logger::log_info(TAG, "Alert event posted successfully.", LOG_COLOR);
 			return true;
 		}
+		// 실패 시 응답 전체 로그
+		Logger::log_error(TAG, fmt::format("Alert API full response: {}", *res_body));
 		if (res_json_opt->contains("message"))
 		{
 			Logger::log_error(TAG,
-			                  fmt::format("Alert API: message: {}", res_json_opt->at("message").get<std::string>()));
+				fmt::format("Alert API: message: {}", res_json_opt->at("message").get<std::string>()));
 		}
 		else
 		{
@@ -229,7 +231,7 @@ bool SolicareCentralHomeHub::postSeniorStats(bool cameraFallDetected, bool weara
 			Logger::log_error(TAG, "Stats API JSON parse error.");
 			return false;
 		}
-		Logger::log_info(TAG, res_json_opt.value().dump());
+		// Logger::log_info(TAG, fmt::format("Stats API full response: {}", *res.body), Logger::ConsoleColor::WHITE);
 		if (status == 200 || status == 201)
 		{
 			Logger::log_info(TAG, "Stats event posted successfully.", LOG_COLOR);

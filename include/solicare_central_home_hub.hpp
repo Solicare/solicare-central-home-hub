@@ -118,6 +118,7 @@ inline constexpr std::string_view TAG = "MonitorProcess";
 inline constexpr auto LOG_COLOR       = Logger::ConsoleColor::CYAN;
 
 inline constexpr auto DATA_QUEUE_SIZE = 100;
+inline constexpr auto TIME_TO_WAIT_DATA = 15;
 
 extern ApiClient::API_MONITOR_MODE mode;
 

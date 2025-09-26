@@ -26,11 +26,13 @@ std::atomic<steady_clock::time_point> wearable_last_data_pushed_time = steady_cl
 } // namespace SolicareHomeHub::Monitor
 
 // 유틸 함수: enum을 string으로 변환
-static std::string monitorEventToString(SolicareHomeHub::ApiClient::API_MONITOR_EVENT event)
+static std::string monitorEventToString(const SolicareHomeHub::ApiClient::API_MONITOR_EVENT event)
 {
 	using namespace SolicareHomeHub::ApiClient;
 	switch (event)
 	{
+	case FALL_DETECTED:
+		return "FALL_DETECTED";
 	case CAMERA_DISCONNECTED:
 		return "CAMERA_DISCONNECTED";
 	case WEARABLE_DISCONNECTED:
@@ -40,7 +42,7 @@ static std::string monitorEventToString(SolicareHomeHub::ApiClient::API_MONITOR_
 	}
 }
 
-static std::string monitorModeToString(SolicareHomeHub::ApiClient::API_MONITOR_MODE mode)
+static std::string monitorModeToString(const SolicareHomeHub::ApiClient::API_MONITOR_MODE mode)
 {
 	using namespace SolicareHomeHub::ApiClient;
 	switch (mode)
@@ -143,7 +145,7 @@ void SolicareCentralHomeHub::start_monitoring()
                     break;
 
                 auto now = steady_clock::now();
-                if (duration_cast<seconds>(now - start_time).count() < 15)
+                if (duration_cast<seconds>(now - start_time).count() < TIME_TO_WAIT_DATA)
                 {
                     // 10초 이내면 분리 감지 및 모든 처리를 건너뜀
                     std::this_thread::sleep_for(1s);
@@ -155,8 +157,8 @@ void SolicareCentralHomeHub::start_monitoring()
                 auto last_wear_gap = duration_cast<seconds>(now - wearable_last_worn_time.load()).count();
 
                 // 복합 분리 감지 조건
-                bool camera_detached   = camera_gap > 15;
-                bool wearable_detached = (wearable_gap > 15) || (last_wear_gap > 15);
+                bool camera_detached   = camera_gap > TIME_TO_WAIT_DATA;
+                bool wearable_detached = (wearable_gap > TIME_TO_WAIT_DATA) || (last_wear_gap > TIME_TO_WAIT_DATA);
 
                 // 테스트용 한 줄 로그 (기존 로그는 생략)
                 log_info(TAG, fmt::format("[TEST] camera_detached: {} | wearable_detached: {} | camera_gap: {}s | "
@@ -304,7 +306,7 @@ void SolicareCentralHomeHub::start_monitoring()
 				                                                                 monitorModeToString(mode), "");
                 }
                 // 착용 후 10초가 지나야 센서 스탯을 전송
-                if (!wearable_detached && last_wear_gap > 10)
+                if (!wearable_detached && last_wear_gap > TIME_TO_WAIT_DATA)
                 {
                     postSeniorStats(camera_fallen_detected, wearable_fallen_detected, temperature_avg, humidity_avg,
 				                                                            bpm_avg, battery_avg);
